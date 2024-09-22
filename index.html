@@ -30,7 +30,7 @@
 
     <script>
         // Initialize WebSocket
-        const signalingSocket = new WebSocket("ws://omegle-production-240f.up.railway.app/chat"); // Use wss:// for secure WebSocket
+        const signalingSocket = new WebSocket("wss://omegle-production-240f.up.railway.app/chat"); // Use wss:// for secure WebSocket
 
         signalingSocket.onopen = () => {
             logMessage("Connected to signaling server.");
