@@ -30,7 +30,7 @@
 
     <script>
         // Initialize WebSocket
-        const signalingSocket = new WebSocket("wss://omegle-production-240f.up.railway.app/chat");
+        const signalingSocket = new WebSocket("ws://omegle-production-240f.up.railway.app/chat"); // Use wss:// for secure WebSocket
 
         signalingSocket.onopen = () => {
             logMessage("Connected to signaling server.");
@@ -70,12 +70,10 @@
             chatBox.appendChild(newMessage);
         }
 
-        // Initialize WebRTC and start capturing video and audio
-        startCallButton.onclick = async () => {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            localVideo.srcObject = localStream;
-
+        function createPeerConnection() {
             peerConnection = new RTCPeerConnection(iceServers);
+
+            // Add local tracks to peer connection
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
             peerConnection.onicecandidate = event => {
@@ -90,35 +88,36 @@
             peerConnection.ontrack = event => {
                 remoteVideo.srcObject = event.streams[0];
             };
+        }
 
-            // Create offer
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
+        // Initialize WebRTC and start capturing video and audio
+        startCallButton.onclick = async () => {
+            try {
+                // Request both audio and video
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
 
-            // Send offer to server
-            signalingSocket.send(JSON.stringify({
-                type: "offer",
-                offer: peerConnection.localDescription
-            }));
+                createPeerConnection(); // Create the peer connection
 
-            logMessage("Offer sent to the server.");
+                // Create offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Send offer to server
+                signalingSocket.send(JSON.stringify({
+                    type: "offer",
+                    offer: peerConnection.localDescription
+                }));
+
+                logMessage("Offer sent to the server.");
+            } catch (error) {
+                logMessage("Error accessing media devices: " + error.message);
+            }
         };
 
         async function handleOffer(offer) {
             if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(iceServers);
-                peerConnection.onicecandidate = event => {
-                    if (event.candidate) {
-                        signalingSocket.send(JSON.stringify({
-                            type: "ice-candidate",
-                            candidate: event.candidate
-                        }));
-                    }
-                };
-
-                peerConnection.ontrack = event => {
-                    remoteVideo.srcObject = event.streams[0];
-                };
+                createPeerConnection(); // Ensure peer connection is created
             }
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
