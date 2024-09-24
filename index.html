@@ -3,25 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video & Audio Test</title>
+    <title>WebRTC Video & Audio Chat</title>
     <style>
-        video {
-            width: 40%;
-            margin: 20px;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #444;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        #video-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 1200px;
+            gap: 20px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
         #chat-box {
             width: 100%;
-            height: 150px;
-            margin-top: 20px;
-            background-color: #f2f2f2;
-            padding: 10px;
+            max-width: 800px;
+            height: 200px;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             overflow-y: auto;
+        }
+
+        #chat-box p {
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                font-size: 0.9rem;
+                padding: 8px 16px;
+            }
+
+            #chat-box {
+                height: 150px;
+            }
         }
     </style>
 </head>
 <body>
     <h1>WebRTC Video & Audio Chat</h1>
-    <div>
+    <div id="video-container">
         <video id="localVideo" autoplay playsinline muted></video>
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
@@ -30,7 +109,7 @@
 
     <script>
         // Initialize WebSocket
-        const signalingSocket = new WebSocket("wss://omegle-production-3fc0.up.railway.app/chat"); // Use wss:// for secure WebSocket
+        const signalingSocket = new WebSocket("wss://omegle-production-3fc0.up.railway.app/chat");
 
         signalingSocket.onopen = () => {
             logMessage("Connected to signaling server.");
@@ -68,12 +147,15 @@
             const newMessage = document.createElement("p");
             newMessage.textContent = message;
             chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(iceServers);
+        // Initialize WebRTC and start capturing video and audio
+        startCallButton.onclick = async () => {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = localStream;
 
-            // Add local tracks to peer connection
+            peerConnection = new RTCPeerConnection(iceServers);
             localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
             peerConnection.onicecandidate = event => {
@@ -88,36 +170,35 @@
             peerConnection.ontrack = event => {
                 remoteVideo.srcObject = event.streams[0];
             };
-        }
 
-        // Initialize WebRTC and start capturing video and audio
-        startCallButton.onclick = async () => {
-            try {
-                // Request both audio and video
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
+            // Create offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
 
-                createPeerConnection(); // Create the peer connection
+            // Send offer to server
+            signalingSocket.send(JSON.stringify({
+                type: "offer",
+                offer: peerConnection.localDescription
+            }));
 
-                // Create offer
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
-                // Send offer to server
-                signalingSocket.send(JSON.stringify({
-                    type: "offer",
-                    offer: peerConnection.localDescription
-                }));
-
-                logMessage("Offer sent to the server.");
-            } catch (error) {
-                logMessage("Error accessing media devices: " + error.message);
-            }
+            logMessage("Offer sent to the server.");
         };
 
         async function handleOffer(offer) {
             if (!peerConnection) {
-                createPeerConnection(); // Ensure peer connection is created
+                peerConnection = new RTCPeerConnection(iceServers);
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        signalingSocket.send(JSON.stringify({
+                            type: "ice-candidate",
+                            candidate: event.candidate
+                        }));
+                    }
+                };
+
+                peerConnection.ontrack = event => {
+                    remoteVideo.srcObject = event.streams[0];
+                };
             }
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
