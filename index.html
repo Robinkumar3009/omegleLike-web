@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video & Audio Chat</title>
+    <title>ChitChatTalk</title>
     <style>
         * {
             box-sizing: border-box;
@@ -22,13 +22,59 @@
             min-height: 100vh;
         }
 
-        h1 {
-            color: #444;
-            margin-bottom: 20px;
-            font-size: 2rem;
+        .header-container {
+            width: 100%;
+            padding: 20px 0;
             text-align: center;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
+        .header-container h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header-container h1 span {
+            display: inline-block;
+            animation: slide-in 2s ease-in-out forwards, fade-in 3s ease-in-out forwards;
+            opacity: 0;
+        }
+
+        .header-container p {
+            color: #fff;
+            font-size: 1.2rem;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+
+        @keyframes slide-in {
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Video and chat UI styling as before */
         #video-container {
             display: flex;
             justify-content: center;
@@ -37,6 +83,7 @@
             width: 100%;
             max-width: 1200px;
             gap: 20px;
+            margin-top: 20px;
         }
 
         video {
@@ -83,8 +130,8 @@
         }
 
         @media (max-width: 768px) {
-            h1 {
-                font-size: 1.5rem;
+            .header-container h1 {
+                font-size: 2rem;
             }
 
             button {
@@ -99,7 +146,11 @@
     </style>
 </head>
 <body>
-    <h1>WebRTC Video & Audio Chat</h1>
+    <div class="header-container">
+        <h1><span>ChitChatTalk</span> Video Chat</h1>
+        <p>Seamless video and audio communication</p>
+    </div>
+
     <div id="video-container">
         <video id="localVideo" autoplay playsinline muted></video>
         <video id="remoteVideo" autoplay playsinline></video>
@@ -108,7 +159,7 @@
     <div id="chat-box"></div>
 
     <script>
-        // Initialize WebSocket
+        // WebRTC and WebSocket logic as before
         const signalingSocket = new WebSocket("wss://omegle-production-3fc0.up.railway.app/chat");
 
         signalingSocket.onopen = () => {
@@ -150,7 +201,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // Initialize WebRTC and start capturing video and audio
         startCallButton.onclick = async () => {
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             localVideo.srcObject = localStream;
@@ -171,11 +221,9 @@
                 remoteVideo.srcObject = event.streams[0];
             };
 
-            // Create offer
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
 
-            // Send offer to server
             signalingSocket.send(JSON.stringify({
                 type: "offer",
                 offer: peerConnection.localDescription
@@ -203,11 +251,9 @@
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
-            // Create answer
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
 
-            // Send answer to server
             signalingSocket.send(JSON.stringify({
                 type: "answer",
                 answer: peerConnection.localDescription
