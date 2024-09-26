@@ -160,7 +160,7 @@
 
     <script>
         // WebRTC and WebSocket logic as before
-        const signalingSocket = new WebSocket("ws://api.chitchattalk.in/chat");
+        const signalingSocket = new WebSocket("wss://api.chitchattalk.in/chat");
 
         signalingSocket.onopen = () => {
             logMessage("Connected to signaling server.");
