@@ -3,180 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChitChatTalk</title>
+    <title>WebRTC Test</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-
-        .header-container {
-            width: 100%;
-            padding: 20px 0;
-            text-align: center;
-            background: linear-gradient(135deg, #007bff, #00c6ff);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-
-        .header-container h1 {
-            color: #fff;
-            font-size: 2.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .header-container h1 span {
-            display: inline-block;
-            animation: slide-in 2s ease-in-out forwards, fade-in 3s ease-in-out forwards;
-            opacity: 0;
-        }
-
-        .header-container p {
-            color: #fff;
-            font-size: 1.2rem;
-            opacity: 0.8;
-            font-weight: 300;
-        }
-
-        @keyframes slide-in {
-            0% {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-            100% {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes fade-in {
-            0% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-
-        #video-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-            width: 100%;
-            max-width: 1200px;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
         video {
-            width: 100%;
-            max-width: 500px;
-            height: auto;
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 40%;
+            margin: 20px;
         }
-
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        button {
-            background-color: #007bff;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1rem;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
         #chat-box {
             width: 100%;
-            max-width: 800px;
-            height: 200px;
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            height: 150px;
+            margin-top: 20px;
+            background-color: #f2f2f2;
+            padding: 10px;
             overflow-y: auto;
         }
-
-        #chat-box p {
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            color: #666;
+        button {
+            margin: 10px;
+            padding: 10px;
+            cursor: pointer;
         }
-
         input {
             padding: 10px;
-            width: calc(100% - 20px);
             margin-top: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .header-container h1 {
-                font-size: 2rem;
-            }
-
-            button {
-                font-size: 0.9rem;
-                padding: 8px 16px;
-            }
-
-            #chat-box {
-                height: 150px;
-            }
-
-            .button-container {
-                flex-wrap: wrap;
-            }
+            width: calc(100% - 20px);
         }
     </style>
 </head>
 <body>
-    <div class="header-container">
-        <h1><span>ChitChatTalk</span> Video Chat</h1>
-        <p>Seamless video and audio communication</p>
-    </div>
-
-    <div id="video-container">
-        <video id="localVideo" autoplay playsinline muted></video>
+    <h1>WebRTC Video Chat</h1>
+    <div>
+        <video id="localVideo" autoplay playsinline></video>
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
-
-    <div class="button-container">
-        <button id="startCall">Start Call</button>
-        <button id="refreshCall">Reconnect</button>
-        <button id="skipUser">Skip User</button>
-        <button id="muteButton">Mute</button>
-    </div>
+    <button id="startCall">Start Call</button>
+    <button id="refreshCall">Reconnect</button>
+    <button id="skipUser">Skip User</button>
+    <button id="muteButton">Mute</button>
 
     <div id="chat-box"></div>
     <input type="text" id="chatInput" placeholder="Type a message..." />
@@ -187,7 +49,6 @@
         let localStream;
         let peerConnection;
         let isReconnecting = false;
-        let isMuted = false;
 
         const localVideo = document.getElementById("localVideo");
         const remoteVideo = document.getElementById("remoteVideo");
@@ -198,6 +59,8 @@
         const sendMessageButton = document.getElementById("sendMessage");
         const muteButton = document.getElementById("muteButton");
 
+        let isMuted = false;
+
         const iceServers = {
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }] // Public STUN server
         };
@@ -207,14 +70,15 @@
             const newMessage = document.createElement("p");
             newMessage.textContent = message;
             chatBox.appendChild(newMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto scroll to bottom
         }
 
+        // Initialize WebSocket connection
         function connectWebSocket() {
             signalingSocket = new WebSocket("wss://api.chitchattalk.in/chat");
 
             signalingSocket.onopen = () => {
-                logMessage("Connected to signaling server.");
+                // logMessage("Connected to signaling server.");
                 if (isReconnecting) {
                     startWebRTC();  // Restart WebRTC connection on reconnection
                 }
@@ -235,40 +99,41 @@
             };
 
             signalingSocket.onerror = (error) => {
-                logMessage("WebSocket Error: " + error);
+                // logMessage("WebSocket Error: " + error);
             };
 
             signalingSocket.onclose = () => {
-                logMessage("WebSocket connection closed. Attempting to reconnect...");
+                // logMessage("WebSocket connection closed. Attempting to reconnect...");
                 isReconnecting = true;
                 setTimeout(() => {
                     connectWebSocket(); // Reconnect WebSocket after a short delay
-                }, 2000);
+                }, 2000); // 2 seconds delay before reconnection
             };
         }
 
+        // Initialize WebRTC and start capturing video
         startCallButton.onclick = async () => {
             await startWebRTC();
         };
 
         refreshCallButton.onclick = async () => {
-            logMessage("Reconnecting to a new user...");
-            resetConnections(); 
-            startWebRTC();
+            // logMessage("Reconnecting to a new user...");
+            resetConnections(); // Reset the WebRTC and WebSocket connections
+            startWebRTC(); // Restart WebRTC
         };
 
         skipUserButton.onclick = async () => {
-            logMessage("Skipping current user...");
-            resetConnections(); 
-            startWebRTC();
+            // logMessage("Skipping current user...");
+            resetConnections(); // Reset the WebRTC and WebSocket connections
+            startWebRTC(); // Send a new offer for a new user
         };
 
         sendMessageButton.onclick = () => {
             const message = chatInput.value;
             if (message.trim() !== "") {
-                logMessage("You: " + message);
+                // logMessage("You: " + message);
                 signalingSocket.send(JSON.stringify({ type: "chat", message: message }));
-                chatInput.value = ""; 
+                chatInput.value = ""; // Clear input after sending
             }
         };
 
@@ -296,18 +161,62 @@
 
             peerConnection.onconnectionstatechange = () => {
                 if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-                    logMessage("Peer connection lost. Trying to reconnect...");
+                    // logMessage("Peer connection lost. Trying to reconnect...");
                     resetConnections();
                     startWebRTC();
                 }
             };
 
+            // Create and send offer
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
+
             signalingSocket.send(JSON.stringify({
                 type: "offer",
                 offer: peerConnection.localDescription
             }));
+
+            // logMessage("Offer sent to the server.");
+        }
+
+        async function handleOffer(offer) {
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(iceServers);
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        signalingSocket.send(JSON.stringify({
+                            type: "ice-candidate",
+                            candidate: event.candidate
+                        }));
+                    }
+                };
+
+                peerConnection.ontrack = event => {
+                    remoteVideo.srcObject = event.streams[0];
+                };
+            }
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            signalingSocket.send(JSON.stringify({
+                type: "answer",
+                answer: peerConnection.localDescription
+            }));
+
+            // logMessage("Answer sent to the server.");
+        }
+
+        function handleAnswer(answer) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            // logMessage("Answer received from the server.");
+        }
+
+        function handleNewICECandidate(candidate) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            // logMessage("ICE candidate received from the server.");
         }
 
         function resetConnections() {
@@ -315,53 +224,23 @@
                 peerConnection.close();
                 peerConnection = null;
             }
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
+            if (signalingSocket) {
+                signalingSocket.close();
             }
-            remoteVideo.srcObject = null;
         }
 
-        function handleOffer(offer) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-                .then(() => {
-                    return peerConnection.createAnswer();
-                })
-                .then(answer => {
-                    return peerConnection.setLocalDescription(answer);
-                })
-                .then(() => {
-                    signalingSocket.send(JSON.stringify({
-                        type: "answer",
-                        answer: peerConnection.localDescription
-                    }));
-                    logMessage("Answer sent to the server.");
-                })
-                .catch(error => {
-                    logMessage("Error handling offer: " + error);
+        // Mute button functionality
+        muteButton.onclick = () => {
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = !isMuted; // Toggle mute
                 });
-        }
+                isMuted = !isMuted;
+                muteButton.textContent = isMuted ? "Unmute" : "Mute"; // Update button text
+            }
+        };
 
-        function handleAnswer(answer) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-                .then(() => {
-                    logMessage("Answer received from remote peer.");
-                })
-                .catch(error => {
-                    logMessage("Error setting remote description: " + error);
-                });
-        }
-
-        function handleNewICECandidate(candidate) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-                .then(() => {
-                    logMessage("New ICE candidate added.");
-                })
-                .catch(error => {
-                    logMessage("Error adding ICE candidate: " + error);
-                });
-        }
-
+        // Start WebSocket connection
         connectWebSocket();
     </script>
 </body>
