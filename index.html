@@ -171,7 +171,6 @@
         <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
-    <!-- Button container for horizontal alignment -->
     <div class="button-container">
         <button id="startCall">Start Call</button>
         <button id="refreshCall">Reconnect</button>
@@ -305,13 +304,10 @@
 
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
-
             signalingSocket.send(JSON.stringify({
                 type: "offer",
                 offer: peerConnection.localDescription
             }));
-
-            logMessage("Offer sent to the server.");
         }
 
         function resetConnections() {
@@ -319,19 +315,52 @@
                 peerConnection.close();
                 peerConnection = null;
             }
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
             remoteVideo.srcObject = null;
         }
 
-        muteButton.onclick = () => {
-            if (localStream) {
-                localStream.getAudioTracks().forEach(track => {
-                    track.enabled = !track.enabled;
+        function handleOffer(offer) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+                .then(() => {
+                    return peerConnection.createAnswer();
+                })
+                .then(answer => {
+                    return peerConnection.setLocalDescription(answer);
+                })
+                .then(() => {
+                    signalingSocket.send(JSON.stringify({
+                        type: "answer",
+                        answer: peerConnection.localDescription
+                    }));
+                    logMessage("Answer sent to the server.");
+                })
+                .catch(error => {
+                    logMessage("Error handling offer: " + error);
                 });
-                isMuted = !isMuted;
-                muteButton.textContent = isMuted ? "Unmute" : "Mute";
-                logMessage(isMuted ? "You are muted" : "You are unmuted");
-            }
-        };
+        }
+
+        function handleAnswer(answer) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
+                .then(() => {
+                    logMessage("Answer received from remote peer.");
+                })
+                .catch(error => {
+                    logMessage("Error setting remote description: " + error);
+                });
+        }
+
+        function handleNewICECandidate(candidate) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+                .then(() => {
+                    logMessage("New ICE candidate added.");
+                })
+                .catch(error => {
+                    logMessage("Error adding ICE candidate: " + error);
+                });
+        }
 
         connectWebSocket();
     </script>
